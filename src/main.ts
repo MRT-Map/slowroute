@@ -1,15 +1,16 @@
 import {
-  type AirAirline,
   type AirAirport,
   type AirGate,
-  type BusCompany,
+  type BusLine,
   type BusStop,
   GD,
   type ID,
+  type IntID,
   type Located,
-  type RailCompany,
+  type Node,
+  type RailLine,
   type RailStation,
-  type SeaCompany,
+  type SeaLine,
   type SeaStop,
   type SpawnWarp,
   type Town,
@@ -88,59 +89,66 @@ const optionsString = options
 htmlFrom.innerHTML = optionsString;
 htmlTo.innerHTML = optionsString;
 
-const AIRPORT_TO_GATE_COST = 20;
 const WARP_COST = 10;
 const FLYING_MPS = 8;
-const CHANGING_COST = 10;
+const CHANGING_COST = 15;
 
-function dijkstra(from: number, to: number): string[] {
-  // type I = {i: number, line?: number}
-  const q: number[] = [from];
+function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
+  type I = `${ID<Node>}` | `${ID<Node>} ${ID<BusLine | SeaLine | RailLine>}`;
+  const q: I[] = [`${from}`];
 
-  const costs = new Map<number, number>();
-  costs.set(from, 0);
+  const costs = new Map<I, number>();
+  costs.set(`${from}`, 0);
 
-  const cameFrom = new Map<number, { from: number; text?: string }>();
+  const cameFrom = new Map<I, { from: I; text?: string }>();
   for (const sw of gd.spawnWarps) {
-    cameFrom.set(sw.i, {from, text: `Take spawn warp to ${sw.name}`})
-    costs.set(sw.i, CHANGING_COST)
-    q.push(sw.i)
+    cameFrom.set(`${sw.i}`, {
+      from: `${from}`,
+      text: `Take spawn warp to ${sw.name}`,
+    });
+    costs.set(`${sw.i}`, CHANGING_COST);
+    q.push(`${sw.i}`);
   }
 
-  const neighbours = new Map<number, { cost: number; text?: string }>();
+  const neighbours = new Map<I, { cost: number; text?: string }>();
 
   while (q.length !== 0) {
-    const i = q.sort((a, b) => costs.get(b)! - costs.get(a)!).pop()!;
-    const cost = costs.get(i)!;
+    console.log(q.length);
+    const il = q.sort((a, b) => costs.get(b)! - costs.get(a)!).pop()!;
+    const i = parseInt(il.split(" ")[0]);
+    const iLine = il.includes(" ") ? parseInt(il.split(" ")[1]) : undefined;
+    const cost = costs.get(il)!;
 
     if (i === to) {
       const output = [];
-      let fi = to;
-      while (fi !== from) {
+      let fi: I = il;
+      while (fi.split(" ")[0] !== `${from}`) {
         let { from: f, text } = cameFrom.get(fi)!;
         fi = f;
         if (text) output.push(text);
-        console.log(text, from, to, fi)
       }
       return output.reverse();
     }
 
     let node = gd.node(i)!;
+    console.log(node);
 
     if (node.type !== "AirGate") {
       const nodeLocated = node as Located<false>;
       for (const [pi, prox] of Object.entries(nodeLocated.proximity)) {
-        const nodeProx = gd.node(pi)!
-        neighbours.set(parseInt(pi), {
-          cost: cost + prox.distance / FLYING_MPS,
+        const nodeProx = gd.node(pi)!;
+        neighbours.set(pi as I, {
+          cost: cost + prox.distance / FLYING_MPS + CHANGING_COST,
+          // @ts-expect-error
           text: `Fly ${Math.round(prox.distance)} blocks to ${nodeProx.type} ${displayNode(nodeProx)}`,
         });
       }
       for (const si of nodeLocated.shared_facility) {
-        const nodeSF = gd.node(si)!
-        neighbours.set(si, {
+        const nodeSF = gd.node(si)!;
+        neighbours.set(`${si}`, {
           cost: cost + CHANGING_COST,
-          text: `Change to ${nodeSF.type} ${(gd.node(nodeSF.company)! as BusCompany<false> | SeaCompany<false> | AirAirline<false> | RailCompany<false>).name} ${displayNode(gd.node(si)!)}`,
+          // @ts-expect-error
+          text: `Change to ${nodeSF.type} ${gd.node(nodeSF.company)!.name} ${displayNode(gd.node(si)!)}`,
         });
       }
     }
@@ -150,20 +158,20 @@ function dijkstra(from: number, to: number): string[] {
         const nodeAirport = node as AirAirport<false>;
         for (const gi of nodeAirport.gates) {
           const gateCode = gd.airGate(gi)!.code;
-          neighbours.set(gi, {
-            cost: cost + AIRPORT_TO_GATE_COST,
+          neighbours.set(`${gi}`, {
+            cost: cost + CHANGING_COST,
             text: gateCode ? `Go to gate ${gateCode}` : undefined,
           });
         }
         break;
       case "AirGate":
         const nodeGate = node as AirGate<false>;
-        neighbours.set(nodeGate.airport, { cost });
+        neighbours.set(`${nodeGate.airport}`, { cost });
         for (const gi of gd.airAirport(nodeGate.airport)!.gates) {
           if (gi === i) continue;
           const gateCode = gd.airGate(gi)!.code;
-          neighbours.set(gi, {
-            cost: cost + AIRPORT_TO_GATE_COST,
+          neighbours.set(`${gi}`, {
+            cost: cost + CHANGING_COST,
             text: gateCode ? `Go to gate ${gateCode}` : undefined,
           });
         }
@@ -175,7 +183,7 @@ function dijkstra(from: number, to: number): string[] {
             const airlineName = gd.airAirline(nodeFlight.airline)!.name;
             const flightCode = nodeFlight.codes.join("/");
             const nodeAirport = gd.airAirport(nodeGate2.airport)!;
-            neighbours.set(gi2, {
+            neighbours.set(`${gi2}`, {
               cost: cost + WARP_COST,
               text:
                 (nodeGate.code !== null ? `At Gate ${nodeGate.code} t` : "T") +
@@ -203,8 +211,8 @@ function dijkstra(from: number, to: number): string[] {
                 ? conn.direction?.backward_label
                 : conn.direction?.forward_label) ?? "";
             if (label) label = `(${label}) `;
-            neighbours.set(parseInt(ci), {
-              cost: cost + WARP_COST,
+            neighbours.set(`${ci} ${busLine.i}`, {
+              cost: cost + WARP_COST + (iLine === busLine.i ? 0 : CHANGING_COST),
               text: `Take ${companyName} ${displayNode(busLine)} ${label}to ${displayNode(nodeBus2)}`,
             });
           }
@@ -221,16 +229,16 @@ function dijkstra(from: number, to: number): string[] {
               conn.direction.direction === i
             )
               continue;
-            const busLine = gd.busLine(conn.line)!;
-            const companyName = gd.busCompany(busLine.company)!.name;
+            const railLine = gd.railLine(conn.line)!;
+            const companyName = gd.railCompany(railLine.company)!.name;
             let label =
               (conn.direction?.direction === i
                 ? conn.direction?.backward_label
                 : conn.direction?.forward_label) ?? "";
             if (label) label = `(${label}) `;
-            neighbours.set(parseInt(ci), {
-              cost: cost + WARP_COST,
-              text: `Take ${companyName} ${displayNode(busLine)} ${label}to ${displayNode(nodeRail2)}`,
+            neighbours.set(`${ci} ${railLine.i}`, {
+              cost: cost + WARP_COST + (iLine === railLine.i ? 0 : CHANGING_COST),
+              text: `Take ${companyName} ${displayNode(railLine)} ${label}to ${displayNode(nodeRail2)}`,
             });
           }
         }
@@ -246,16 +254,16 @@ function dijkstra(from: number, to: number): string[] {
               conn.direction.direction === i
             )
               continue;
-            const busLine = gd.busLine(conn.line)!;
-            const companyName = gd.busCompany(busLine.company)!.name;
+            const seaLine = gd.seaLine(conn.line)!;
+            const companyName = gd.seaCompany(seaLine.company)!.name;
             let label =
               (conn.direction?.direction === i
                 ? conn.direction?.backward_label
                 : conn.direction?.forward_label) ?? "";
             if (label) label = `(${label}) `;
-            neighbours.set(parseInt(ci), {
-              cost: cost + WARP_COST,
-              text: `Take ${companyName} ${displayNode(busLine)} ${label}to ${displayNode(nodeSea2)}`,
+            neighbours.set(`${ci} ${seaLine.i}`, {
+              cost: cost + WARP_COST + (iLine === seaLine.i ? 0 : CHANGING_COST),
+              text: `Take ${companyName} ${displayNode(seaLine)} ${label}to ${displayNode(nodeSea2)}`,
             });
           }
         }
@@ -270,7 +278,7 @@ function dijkstra(from: number, to: number): string[] {
       const existingCost = costs.get(ni) ?? Infinity;
       if (!costs.has(ni)) q.push(ni);
       if (newCost < existingCost) {
-        cameFrom.set(ni, { from: i, text });
+        cameFrom.set(ni, { from: il, text });
         costs.set(ni, newCost);
       }
     }
