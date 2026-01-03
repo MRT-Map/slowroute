@@ -10,11 +10,15 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
+    "@types/jquery": "^3.5.33",
+    "@types/select2": "^4.0.63",
     "prettier": "^3.7.4",
     "typescript": "~5.9.3",
     "vite": "^7.3.0"
   },
   "dependencies": {
-    "gatelogue-types": "^2.0.7"
+    "gatelogue-types": "^2.0.7",
+    "jquery": "^3.7.1",
+    "select2": "4.1.0-rc.0"
   }
 }

@@ -15,6 +15,11 @@ import {
   type SpawnWarp,
   type Town,
 } from "gatelogue-types";
+import $ from "jquery";
+import select2 from "select2";
+import 'select2/dist/css/select2.css';
+// @ts-expect-error
+select2($)
 
 // const htmlFromType = document.getElementById("fromType")! as HTMLSelectElement
 // const htmlToType = document.getElementById("toType")! as HTMLSelectElement
@@ -88,6 +93,8 @@ const optionsString = options
   .join();
 htmlFrom.innerHTML = optionsString;
 htmlTo.innerHTML = optionsString;
+$('#from').select2();
+$('#to').select2();
 
 const WARP_COST = 10;
 const FLYING_MPS = 8;
@@ -285,7 +292,7 @@ function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
     neighbours.clear();
   }
 
-  return ["No solution"];
+  return ["No route"];
 }
 
 htmlGo.addEventListener("click", () => {
