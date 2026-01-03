@@ -25,7 +25,9 @@ const htmlFrom = document.getElementById("from")! as HTMLSelectElement;
 const htmlTo = document.getElementById("to")! as HTMLSelectElement;
 const htmlOut = document.getElementById("out")! as HTMLDivElement;
 const htmlGo = document.getElementById("go")! as HTMLButtonElement;
-const htmlFromRandom = document.getElementById("from-random")! as HTMLButtonElement;
+const htmlFromRandom = document.getElementById(
+  "from-random",
+)! as HTMLButtonElement;
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
 const gd = await GD.getNoSources();
 
@@ -97,15 +99,17 @@ function setupDropdown() {
 setupDropdown();
 
 function randomDest(field: HTMLSelectElement) {
-  const children = field.children
-  const option = children[Math.floor(Math.random()*children.length)] as HTMLOptionElement;
-  field.value = option.value
-  $(field).select2()
+  const children = field.children;
+  const option = children[
+    Math.floor(Math.random() * children.length)
+  ] as HTMLOptionElement;
+  field.value = option.value;
+  $(field).select2();
 }
-htmlFromRandom.addEventListener("click", () => randomDest(htmlFrom))
-htmlToRandom.addEventListener("click", () => randomDest(htmlTo))
-randomDest(htmlFrom)
-randomDest(htmlTo)
+htmlFromRandom.addEventListener("click", () => randomDest(htmlFrom));
+htmlToRandom.addEventListener("click", () => randomDest(htmlTo));
+randomDest(htmlFrom);
+randomDest(htmlTo);
 
 const MODES = [
   "air",
@@ -119,11 +123,11 @@ const MODES = [
   "cart",
 ] as const;
 const SPEEDS = {
-  "walk": 6,
-  "walk10": 15,
-  "fly": 20,
-  "fly10": 100,
-}
+  walk: 6,
+  walk10: 15,
+  fly: 20,
+  fly10: 100,
+};
 type DijkstraConfig = {
   WARP_COST: number;
   FLYING_MPS: number;
@@ -144,14 +148,14 @@ const CONFIG: DijkstraConfig = {
 
 function setupProxRadioButtons() {
   for (const [id, speed] of Object.entries(SPEEDS)) {
-    const radio = document.getElementById(`prox-${id}`)! as HTMLInputElement
+    const radio = document.getElementById(`prox-${id}`)! as HTMLInputElement;
     if (id === "fly") radio.checked = true;
     radio.addEventListener("change", () => {
-      if (radio.checked) CONFIG.FLYING_MPS = speed
-    })
+      if (radio.checked) CONFIG.FLYING_MPS = speed;
+    });
   }
 }
-setupProxRadioButtons()
+setupProxRadioButtons();
 
 function setupRouteByCheckboxes() {
   for (const mode of MODES) {
@@ -206,15 +210,21 @@ function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
       let fi: I = il;
       while (fi.split(" ")[0] !== `${from}`) {
         let { from: f, text } = cameFrom.get(fi)!;
-        console.log(gd.node(fi.split(" ")[0]), "comes from", gd.node(f.split(" ")[0]))
+        console.log(
+          gd.node(fi.split(" ")[0]),
+          "comes from",
+          gd.node(f.split(" ")[0]),
+        );
         fi = f;
         if (text) output.push(text);
       }
-      output.push(`Will take ~${Math.round(cost)} seconds`)
+      output.push(`Will take ~${Math.round(cost)} seconds`);
       // @ts-ignore
-      if (!gd.node(to)!.coordinates) output.push("WARNING: End has unknown coordinates")
+      if (!gd.node(to)!.coordinates)
+        output.push("WARNING: End has unknown coordinates");
       // @ts-ignore
-      if (!gd.node(from)!.coordinates) output.push("WARNING : Start has unknown coordinates")
+      if (!gd.node(from)!.coordinates)
+        output.push("WARNING : Start has unknown coordinates");
       return output.reverse();
     }
 
@@ -438,10 +448,14 @@ htmlGo.addEventListener("click", () => {
     return;
   }
 
-  htmlOut.innerHTML += dijkstra(fromI, toI).map(a => a
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;")).join("<br>");
+  htmlOut.innerHTML += dijkstra(fromI, toI)
+    .map((a) =>
+      a
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;"),
+    )
+    .join("<br>");
 });
