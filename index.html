@@ -5,16 +5,48 @@
     <!--    <link rel="icon" type="image/svg+xml" href="/vite.svg" />-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>slowroute</title>
-    <script type="module" crossorigin src="/slowroute/assets/index-DdPmNjo4.js"></script>
+    <script type="module" crossorigin src="/slowroute/assets/index-D5H7-4az.js"></script>
+    <link rel="stylesheet" crossorigin href="/slowroute/assets/index-4su2jwNt.css">
   </head>
   <body>
     <label for="from">From</label>
     <select id="from"></select>
+    <button id="from-random">Random</button>
     <br />
 
     <label for="to">To</label>
     <select id="to"></select>
+    <button id="to-random">Random</button>
     <br />
+
+    <label for="route-by-air">Air</label>
+    <input type="checkbox" id="route-by-air" /> |
+    <label for="route-by-bus">Bus</label>
+    <input type="checkbox" id="route-by-bus" /> |
+    <label for="route-by-rail">Rail</label>
+    <input type="checkbox" id="route-by-rail" /> |
+    <label for="route-by-sea">Sea</label>
+    <input type="checkbox" id="route-by-sea" /> |
+    <label for="route-by-spawn-warp">Spawn Warp</label>
+    <input type="checkbox" id="route-by-spawn-warp" /> |
+    <label for="route-by-traincarts">TrainCarts</label>
+    <input type="checkbox" id="route-by-traincarts" /> |
+    <label for="route-by-warp">Warp</label>
+    <input type="checkbox" id="route-by-warp" /> |
+    <label for="route-by-vehicles">Vehicles</label>
+    <input type="checkbox" id="route-by-vehicles" /> |
+    <label for="route-by-cart">Cart</label>
+    <input type="checkbox" id="route-by-cart" />
+    <br />
+    <label for="prox-walk">Walking/Running</label>
+    <input type="radio" id="prox-walk" name="prox" /> |
+    <label for="prox-walk10">Walking/Running (speed 10)</label>
+    <input type="radio" id="prox-walk10" name="prox" /> |
+    <label for="prox-fly">Flying</label>
+    <input type="radio" id="prox-fly" name="prox" /> |
+    <label for="prox-fly10">Flying (speed 10)</label>
+    <input type="radio" id="prox-fly10" name="prox" />
+    <br>
 
     <button id="go">Go</button>
 
