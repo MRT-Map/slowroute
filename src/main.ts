@@ -132,6 +132,7 @@ type DijkstraConfig = {
   WARP_COST: number;
   FLYING_MPS: number;
   TRAINCART_MPS: number;
+  TRAINCART_LOCAL_MPS: number;
   CART_MPS: number;
   CHANGING_COST: number;
   ROUTE_BY: Set<(typeof MODES)[number]>;
@@ -141,6 +142,7 @@ const CONFIG: DijkstraConfig = {
   WARP_COST: 5,
   FLYING_MPS: SPEEDS["fly"],
   TRAINCART_MPS: 50,
+  TRAINCART_LOCAL_MPS: 20,
   CART_MPS: 8,
   CHANGING_COST: 15,
   ROUTE_BY: new Set(MODES),
@@ -372,7 +374,7 @@ function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
                 continue;
               if (railLine.mode === "cart" && !CONFIG.ROUTE_BY.has("cart"))
                 continue;
-              const companyName = gd.railCompany(railLine.company)!.name;
+              const railCompany = gd.railCompany(railLine.company)!;
               let label =
                 (conn.direction?.direction === i
                   ? conn.direction?.backward_label
@@ -383,13 +385,13 @@ function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
                   cost +
                   (railLine.mode === "traincarts" || railLine.mode == "vehicles"
                     ? distance(nodeRail.coordinates, nodeRail2.coordinates) /
-                      CONFIG.TRAINCART_MPS
+                      (railCompany.local ? CONFIG.TRAINCART_LOCAL_MPS : CONFIG.TRAINCART_MPS)
                     : railLine.mode === "cart"
                       ? distance(nodeRail.coordinates, nodeRail2.coordinates) /
                         CONFIG.CART_MPS
                       : CONFIG.WARP_COST) +
                   (iLine === railLine.i ? 0 : CONFIG.CHANGING_COST),
-                text: `Take ${companyName} ${displayNode(railLine)} ${label}to ${displayNode(nodeRail2)}`,
+                text: `Take ${railCompany.name} ${displayNode(railLine)} ${label}to ${displayNode(nodeRail2)}`,
               });
             }
           }
