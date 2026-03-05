@@ -10,7 +10,7 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
-    "@types/jquery": "3.5.33",
+    "@types/jquery": "4.0.0",
     "@types/select2": "4.0.63",
     "prettier": "3.8.1",
     "typescript": "5.9.3",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "gatelogue-types": "2.0.9",
-    "jquery": "3.7.1",
+    "jquery": "4.0.0",
     "select2": "4.1.0-rc.0"
   }
 }
