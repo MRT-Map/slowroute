@@ -86,7 +86,7 @@ function setupDropdown() {
                   ? `${node.name} (${node.rank})`
                   : `unknown node ${node}`;
 
-    options.push([node.i, `${node.constructor.name} ${option}`]);
+    options.push([node.i, `${node.type} ${option}`]);
   }
   const optionsString = options
     .sort(([_, a], [__, b]) => a.localeCompare(b))
@@ -251,7 +251,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           i: nodeSF.i,
           cost: cost + CONFIG.CHANGING_COST,
           // @ts-expect-error
-          text: `Change to ${nodeSF.constructor.name} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
+          text: `Change to ${nodeSF.type} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
         });
       }
     }
