@@ -593,14 +593,18 @@ htmlGo.addEventListener("click", () => {
     return;
   }
 
-  htmlOut.innerHTML += dijkstra(from, to)
-    .map((a) =>
-      a
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;"),
-    )
-    .join("<br>");
+  try {
+    htmlOut.innerHTML += dijkstra(from, to)
+      .map((a) =>
+        a
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;"),
+      )
+      .join("<br>");
+  } catch (e) {
+    htmlOut.innerHTML = `Potential OOM. Try refreshing this page<br>${e}`
+  }
 });
