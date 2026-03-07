@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       gatelogue-types:
-        specifier: 2.0.9
-        version: 2.0.9
+        specifier: ^3.0.6
+        version: 3.0.6
       jquery:
         specifier: 4.0.0
         version: 4.0.0
@@ -32,7 +32,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: 7.3.1
-        version: 7.3.1
+        version: 7.3.1(@types/node@25.3.3)
 
 packages:
 
@@ -336,6 +336,9 @@ packages:
   '@types/jquery@4.0.0':
     resolution: {integrity: sha512-Z+to+A2VkaHq1DfI2oSwsoCdhCHMpTSgjWzNcbNlRGYzksDBpPUgEcAL+RQjOBJRaLoEAOHXxqDGBVP+BblBwg==}
 
+  '@types/node@25.3.3':
+    resolution: {integrity: sha512-DpzbrH7wIcBaJibpKo9nnSQL0MTRdnWttGyE5haGwK86xgMOkFLp7vEyfQPGLOJh5wNYiJ3V9PmUMDhV9u8kkQ==}
+
   '@types/select2@4.0.63':
     resolution: {integrity: sha512-/DXUfPSj3iVTGlRYRYPCFKKSogAGP/j+Z0fIMXbBiBtmmZj0WH7vnfNuckafq9C43KnqPPQW2TI/Rj/vTSGnQQ==}
 
@@ -358,8 +361,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gatelogue-types@2.0.9:
-    resolution: {integrity: sha512-khLz7y39psNFExk65kppG/CPu1USsTmtSSyCT93XzQlVsl1XgcGgaQQ5ismB3SKQ1CsQH82kt6EqDe+hKpjWDw==}
+  gatelogue-types@3.0.6:
+    resolution: {integrity: sha512-SolKp2hPXtoPn5oIdjYaSLIFsOo53jTyUBsfWxwGUkGKCTZdxsF1+14YxI6gNKcuvcovTJTByxkQInzZCSnqzQ==}
 
   jquery@4.0.0:
     resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
@@ -397,6 +400,9 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  sql.js@1.14.1:
+    resolution: {integrity: sha512-gcj8zBWU5cFsi9WUP+4bFNXAyF1iRpA3LLyS/DP5xlrNzGmPIizUeBggKa8DbDwdqaKwUcTEnChtd2grWo/x/A==}
+
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
@@ -405,6 +411,9 @@ packages:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
@@ -605,6 +614,11 @@ snapshots:
 
   '@types/jquery@4.0.0': {}
 
+  '@types/node@25.3.3':
+    dependencies:
+      undici-types: 7.18.2
+    optional: true
+
   '@types/select2@4.0.63':
     dependencies:
       '@types/jquery': 4.0.0
@@ -645,7 +659,9 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gatelogue-types@2.0.9: {}
+  gatelogue-types@3.0.6:
+    dependencies:
+      sql.js: 1.14.1
 
   jquery@4.0.0: {}
 
@@ -698,6 +714,8 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
+  sql.js@1.14.1: {}
+
   tinyglobby@0.2.15:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.3)
@@ -705,7 +723,10 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  vite@7.3.1:
+  undici-types@7.18.2:
+    optional: true
+
+  vite@7.3.1(@types/node@25.3.3):
     dependencies:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.3)
@@ -714,4 +735,5 @@ snapshots:
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:
+      '@types/node': 25.3.3
       fsevents: 2.3.3

@@ -1,19 +1,22 @@
 import {
-  type AirAirport,
-  type AirGate,
-  type BusLine,
-  type BusStop,
+  AirAirport,
+  AirGate,
+  BusBerth,
+  BusStop,
   GD,
+  Node,
+  LocatedNode,
+  RailPlatform,
+  RailStation,
+  SeaDock,
+  SeaStop,
+  SpawnWarp,
+  BusLine,
+  SeaLine,
+  RailLine,
+  Town,
   type ID,
-  type IntID,
-  type Located,
-  type Node,
-  type RailLine,
-  type RailStation,
-  type SeaLine,
-  type SeaStop,
-  type SpawnWarp,
-  type Town,
+  type AirMode,
 } from "gatelogue-types";
 import $ from "jquery";
 import select2 from "select2";
@@ -29,65 +32,61 @@ const htmlFromRandom = document.getElementById(
   "from-random",
 )! as HTMLButtonElement;
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
-const gd = await GD.getNoSources();
+const gd = await GD.get();
 
-function displayNode(node: {
-  codes?: string[] | null;
-  code?: string | null;
-  name?: string | null;
-  names?: string[] | null;
-}) {
-  const codes2 = node.codes ?? (node.code ? [node.code] : []);
-  const name2 = node.names ? node.names.join("/") : node.name;
-  if (
-    codes2.length !== 0 &&
-    name2 &&
-    (codes2.length != 1 || codes2[0] !== name2)
-  ) {
-    return `${name2} (${codes2.join("/")})`;
-  } else if (!name2) {
-    return codes2?.join("/") ?? "";
+function displayNode(node: Node) {
+  let [codes, name]: [string | string[], string | string[]] = (
+    node instanceof AirAirport
+      ? [node.code, node.names]
+      : node instanceof BusStop ||
+          node instanceof SeaStop ||
+          node instanceof RailStation
+        ? [node.codes, node.name ?? ""]
+        : node instanceof BusLine ||
+            node instanceof SeaLine ||
+            node instanceof RailLine
+          ? [node.code, node.name ?? ""]
+          : node instanceof SpawnWarp
+            ? ["", node.name]
+            : node instanceof Town
+              ? ["", node.name]
+              : undefined
+  )!;
+  if (Array.isArray(codes)) {
+    codes = codes.join("/");
+  }
+  if (Array.isArray(name)) {
+    name = name.join("/");
+  }
+
+  if (codes && name) {
+    return `${name} (${codes})`;
+  } else if (!name) {
+    return codes;
   } else {
-    return name2 ?? "";
+    return name;
   }
 }
 
 function setupDropdown() {
   let options: [number, string][] = [];
-  for (const node of gd.nodes) {
-    let option;
-    switch (node.type) {
-      case "AirAirport":
-        const nodeAirport = node as AirAirport<false>;
-        option = `${nodeAirport.names?.join("/")} (${nodeAirport.code})`;
-        break;
-      case "BusStop":
-        const nodeBus = node as BusStop<false>;
-        const busCompanyName = gd.busCompany(nodeBus.company)!.name;
-        option = `[${busCompanyName}] ` + displayNode(nodeBus);
-        break;
-      case "RailStation":
-        const nodeRail = node as RailStation<false>;
-        const railCompanyName = gd.busCompany(nodeRail.company)!.name;
-        option = `[${railCompanyName}] ` + displayNode(nodeRail);
-        break;
-      case "SeaStop":
-        const nodeSea = node as SeaStop<false>;
-        const seaCompanyName = gd.busCompany(nodeSea.company)!.name;
-        option = `[${seaCompanyName}] ` + displayNode(nodeSea);
-        break;
-      case "Town":
-        const nodeTown = node as Town<false>;
-        option = `${nodeTown.name} (${nodeTown.rank})`;
-        break;
-      case "SpawnWarp":
-        const nodeSpawnWarp = node as SpawnWarp<false>;
-        option = nodeSpawnWarp.name;
-        break;
-      default:
-        continue;
-    }
-    options.push([node.i, `${node.type} ${option}`]);
+  for (const node of gd.locatedNodes) {
+    let option =
+      node instanceof AirAirport
+        ? `${node.names?.join("/")} (${node.code})`
+        : node instanceof BusStop
+          ? `[${node.company.name}] ` + displayNode(node)
+          : node instanceof RailStation
+            ? `[${node.company.name}] ` + displayNode(node)
+            : node instanceof SeaStop
+              ? `[${node.company.name}] ` + displayNode(node)
+              : node instanceof SpawnWarp
+                ? `${node.name}`
+                : node instanceof Town
+                  ? `${node.name} (${node.rank})`
+                  : `unknown node ${node}`;
+
+    options.push([node.i, `${node.constructor.name} ${option}`]);
   }
   const optionsString = options
     .sort(([_, a], [__, b]) => a.localeCompare(b))
@@ -183,257 +182,401 @@ function distance(from: [number, number] | null, to: [number, number] | null) {
   return Math.sqrt(Math.pow(from[0] - to[0], 2) + Math.pow(from[1] - to[1], 2));
 }
 
-function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
-  type I = `${ID<Node>}` | `${ID<Node>} ${ID<BusLine | SeaLine | RailLine>}`;
-  const q: I[] = [`${from}`];
+type LocatedNodes =
+  | AirAirport
+  | BusStop
+  | SeaStop
+  | RailStation
+  | SpawnWarp
+  | Town;
+function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
+  const q: ID[] = [from.i];
 
-  const costs = new Map<I, number>();
-  costs.set(`${from}`, 0);
+  const costs = new Map<ID, number>();
+  costs.set(from.i, 0);
 
-  const cameFrom = new Map<I, { from: I; text?: string }>();
+  const cameFrom = new Map<ID, { from: ID; text?: () => string }>();
   if (CONFIG.ROUTE_BY.has("spawn-warp"))
     for (const sw of gd.spawnWarps) {
-      cameFrom.set(`${sw.i}`, {
-        from: `${from}`,
-        text: `Take spawn warp to ${sw.name}`,
+      cameFrom.set(sw.i, {
+        from: from.i,
+        text: () => `Take spawn warp to ${sw.name}`,
       });
-      costs.set(`${sw.i}`, CONFIG.CHANGING_COST);
-      q.push(`${sw.i}`);
+      costs.set(sw.i, CONFIG.CHANGING_COST);
+      q.push(sw.i);
     }
 
   while (q.length !== 0) {
-    const il = q.sort((a, b) => costs.get(b)! - costs.get(a)!).pop()!;
-    const i = parseInt(il.split(" ")[0]);
-    const iLine = il.includes(" ") ? parseInt(il.split(" ")[1]) : undefined;
-    const cost = costs.get(il)!;
+    const node = gd.getNode(
+      q.sort((a, b) => costs.get(b)! - costs.get(a)!).pop()!,
+    )!;
+    const cost = costs.get(node.i)!;
 
-    if (i === to) {
-      const output = [];
-      let fi: I = il;
-      while (fi.split(" ")[0] !== `${from}`) {
+    if (node.i === to.i) {
+      const output: string[] = [];
+      let fi = node.i;
+      while (fi != from.i) {
         let { from: f, text } = cameFrom.get(fi)!;
-        console.log(
-          gd.node(fi.split(" ")[0]),
-          "comes from",
-          gd.node(f.split(" ")[0]),
-        );
+        console.log(fi, "comes from", f);
         fi = f;
-        if (text) output.push(text);
+        if (text) output.push(text());
       }
       output.push(`Will take ~${Math.round(cost)} seconds`);
-      // @ts-ignore
-      if (!gd.node(to)!.coordinates)
-        output.push("WARNING: End has unknown coordinates");
-      // @ts-ignore
-      if (!gd.node(from)!.coordinates)
+      if (!to.coordinates) output.push("WARNING: End has unknown coordinates");
+      if (!from.coordinates)
         output.push("WARNING : Start has unknown coordinates");
       return output.reverse();
     }
 
-    let node = gd.node(i)!;
-    console.log(node, q.length);
+    console.log(node, cost, q.length);
 
-    const neighbours = new Map<I, { cost: number; text?: string }>();
+    const neighbours: { i: ID; cost: number; text?: () => string }[] = [];
 
-    if (node.type !== "AirGate") {
-      const nodeLocated = node as Located<false>;
-      for (const [pi, prox] of Object.entries(nodeLocated.proximity)) {
-        const nodeProx = gd.node(pi)!;
-        neighbours.set(pi as I, {
-          cost: cost + prox.distance / CONFIG.FLYING_MPS + CONFIG.CHANGING_COST,
-          // @ts-expect-error
-          text: `Fly ${Math.round(prox.distance)} blocks to ${nodeProx.type} ${displayNode(nodeProx)}`,
+    if (node instanceof LocatedNode) {
+      const sql = gd.execGetMany<[ID, number, string]>(
+        `WITH P AS (SELECT (CASE WHEN node1 = $1 THEN node2 ELSE node1 END) proxI, distance FROM Proximity WHERE node1 = $1 OR node2 = $1)
+             SELECT P.proxI, P.distance, N.type FROM P LEFT JOIN Node N ON P.proxI = N.i`,
+        [node.i],
+      );
+      for (const [proxI, distance, proxType] of sql) {
+        neighbours.push({
+          i: proxI,
+          cost: cost + distance / CONFIG.FLYING_MPS + CONFIG.CHANGING_COST,
+          text: () =>
+            `Fly ${Math.round(distance)} blocks to ${proxType} ${displayNode(gd.getNode(proxI, proxType)!)}`,
         });
       }
-      for (const si of nodeLocated.shared_facility) {
-        const nodeSF = gd.node(si)!;
-        neighbours.set(`${si}`, {
+      for (const nodeSF of node.sharedFacilities) {
+        neighbours.push({
+          i: nodeSF.i,
           cost: cost + CONFIG.CHANGING_COST,
           // @ts-expect-error
-          text: `Change to ${nodeSF.type} ${gd.node(nodeSF.company)!.name} ${displayNode(gd.node(si)!)}`,
+          text: `Change to ${nodeSF.constructor.name} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
         });
       }
     }
 
-    switch (node.type) {
-      case "AirAirport":
-        const nodeAirport = node as AirAirport<false>;
-        for (const gi of nodeAirport.gates) {
-          const gateCode = gd.airGate(gi)!.code;
-          neighbours.set(`${gi}`, {
-            cost: cost + CONFIG.CHANGING_COST,
-            text: gateCode ? `Go to gate ${gateCode}` : undefined,
+    if (node instanceof AirAirport) {
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM AirGate WHERE airport = $1`,
+        [node.i],
+      );
+      for (const [gateI, gateCode] of sql) {
+        neighbours.push({
+          i: gateI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: gateCode ? () => `Go to gate ${gateCode}` : undefined,
+        });
+      }
+    } else if (node instanceof AirGate) {
+      const airport = node.airport;
+      neighbours.push({ i: airport.i, cost });
+
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM AirGate WHERE airport = $1 AND i != $2`,
+        [airport.i, node.i],
+      );
+      for (const [gateI, gateCode] of sql) {
+        neighbours.push({
+          i: gateI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: gateCode ? () => `Go to gate ${gateCode}` : undefined,
+        });
+      }
+      if (CONFIG.ROUTE_BY.has("air")) {
+        const sql = gd.execGetMany<
+          [string, AirMode | null, string, ID, string | null, ID]
+        >(
+          `SELECT F.code, C.mode, A.name, G.i, G.code, G.airport
+               FROM AirFlight F
+               LEFT JOIN Aircraft C ON F.aircraft = C.name
+               LEFT JOIN AirAirline A ON F.airline = A.i
+               LEFT JOIN AirGate G ON F."to" = G.i
+               WHERE F."from" = $1`,
+          [node.i],
+        );
+        for (const [
+          flightCode,
+          aircraftMode,
+          airlineName,
+          toGateI,
+          toGateCode,
+          toAirportI,
+        ] of sql) {
+          if (
+            aircraftMode === "traincarts plane" &&
+            !CONFIG.ROUTE_BY.has("traincarts")
+          )
+            continue;
+          if (
+            aircraftMode !== "traincarts plane" &&
+            !CONFIG.ROUTE_BY.has("warp")
+          )
+            continue;
+
+          const gateCode = node.code;
+          const toAirport = new AirAirport(toAirportI, gd);
+          neighbours.push({
+            i: toGateI,
+            cost:
+              cost +
+              (gateCode === null ? CONFIG.CHANGING_COST : 0) +
+              (aircraftMode === "traincarts plane"
+                ? distance(airport.coordinates, toAirport.coordinates) /
+                  CONFIG.TRAINCART_MPS
+                : CONFIG.WARP_COST), // todo flight duration
+            text: () =>
+              (gateCode !== null ? `At Gate ${gateCode} t` : "T") +
+              `ake ${airlineName} ${flightCode} to ${displayNode(toAirport)}` +
+              (toGateCode !== null ? ` (Gate ${toGateCode})` : ""),
           });
         }
-        break;
-      case "AirGate":
-        const nodeGate = node as AirGate<false>;
-        neighbours.set(`${nodeGate.airport}`, { cost });
-        const nodeGateAirport = gd.airAirport(nodeGate.airport)!;
-        for (const gi of nodeGateAirport.gates) {
-          if (gi === i) continue;
-          const gateCode = gd.airGate(gi)!.code;
-          neighbours.set(`${gi}`, {
-            cost: cost + CONFIG.CHANGING_COST,
-            text: gateCode ? `Go to gate ${gateCode}` : undefined,
+      }
+    } else if (node instanceof BusStop) {
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM BusBerth WHERE stop = $1`,
+        [node.i],
+      );
+      for (const [berthI, berthCode] of sql) {
+        neighbours.push({
+          i: berthI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: berthCode ? () => `Go to berth ${berthCode}` : undefined,
+        });
+      }
+    } else if (node instanceof BusBerth) {
+      const stop = node.stop;
+      neighbours.push({ i: stop.i, cost });
+
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM BusBerth WHERE stop = $1 AND i != $2`,
+        [stop.i, node.i],
+      );
+      for (const [berthI, berthCode] of sql) {
+        neighbours.push({
+          i: berthI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: berthCode ? () => `Go to berth ${berthCode}` : undefined,
+        });
+      }
+      if (CONFIG.ROUTE_BY.has("bus")) {
+        const sql = gd.execGetMany<
+          [string | null, number | null, ID, ID, string | null, ID, string]
+        >(
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, CP.name
+               FROM BusConnection C
+               LEFT JOIN BusLine L ON C.line = L.i
+               LEFT JOIN BusBerth B ON C."to" = B.i
+               LEFT JOIN BusCompany CP ON L.company = CP.i
+               WHERE C."from" = $1`,
+          [node.i],
+        );
+        for (const [
+          connDirection,
+          connDuration,
+          toBerthI,
+          lineI,
+          lineMode,
+          toStopI,
+          companyName,
+        ] of sql) {
+          if (lineMode === "traincarts" && !CONFIG.ROUTE_BY.has("traincarts"))
+            continue;
+          if (lineMode !== "traincarts" && !CONFIG.ROUTE_BY.has("warp"))
+            continue;
+
+          const line = new BusLine(lineI, gd);
+          const toStop = new BusStop(toStopI, gd);
+          let label = connDirection ?? "";
+          if (label) label = `(${label}) `;
+          neighbours.push({
+            i: toBerthI,
+            cost:
+              cost +
+              (connDuration ??
+                (lineMode === "traincarts"
+                  ? distance(stop.coordinates, toStop.coordinates) /
+                    CONFIG.TRAINCART_MPS
+                  : CONFIG.WARP_COST)),
+            text: () =>
+              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStop)}`,
           });
         }
-        if (CONFIG.ROUTE_BY.has("air"))
-          for (const fi of nodeGate.flights) {
-            const nodeFlight = gd.airFlight(fi)!;
-            if (
-              nodeFlight.mode === "traincarts plane" &&
-              !CONFIG.ROUTE_BY.has("traincarts")
-            )
-              continue;
-            if (
-              nodeFlight.mode !== "traincarts plane" &&
-              !CONFIG.ROUTE_BY.has("warp")
-            )
-              continue;
-            for (const gi2 of nodeFlight.gates) {
-              if (gi2 === i) continue;
-              const nodeGate2 = gd.airGate(gi2)!;
-              const airlineName = gd.airAirline(nodeFlight.airline)!.name;
-              const flightCode = nodeFlight.codes.join("/");
-              const nodeGateAirport2 = gd.airAirport(nodeGate2.airport)!;
-              neighbours.set(`${gi2}`, {
-                cost:
-                  cost +
-                  (nodeGate.code === null ? CONFIG.CHANGING_COST : 0) +
-                  (nodeFlight.mode === "traincarts plane"
-                    ? distance(
-                        nodeGateAirport.coordinates,
-                        nodeGateAirport2.coordinates,
-                      ) / CONFIG.TRAINCART_MPS
-                    : CONFIG.WARP_COST),
-                text:
-                  (nodeGate.code !== null
-                    ? `At Gate ${nodeGate.code} t`
-                    : "T") +
-                  `ake ${airlineName} ${flightCode} to ${displayNode(nodeGateAirport2)}` +
-                  (nodeGate2.code !== null ? ` (Gate ${nodeGate2.code})` : ""),
-              });
-            }
-          }
-        break;
-      case "BusStop":
-        const nodeBus = node as BusStop<false>;
-        if (CONFIG.ROUTE_BY.has("bus") && CONFIG.ROUTE_BY.has("warp"))
-          for (const [ci, conns] of Object.entries(nodeBus.connections)) {
-            const nodeBus2 = gd.busStop(ci)!;
-            for (const conn of conns) {
-              if (
-                conn.direction &&
-                conn.direction.one_way &&
-                conn.direction.direction === i
-              )
-                continue;
-              const busLine = gd.busLine(conn.line)!;
-              // TODO busLine.mode
-              const companyName = gd.busCompany(busLine.company)!.name;
-              let label =
-                (conn.direction?.direction === i
-                  ? conn.direction?.backward_label
-                  : conn.direction?.forward_label) ?? "";
-              if (label) label = `(${label}) `;
-              neighbours.set(`${ci} ${busLine.i}`, {
-                cost:
-                  cost +
-                  CONFIG.WARP_COST +
-                  (iLine === busLine.i ? 0 : CONFIG.CHANGING_COST),
-                text: `Take ${companyName} ${displayNode(busLine)} ${label}to ${displayNode(nodeBus2)}`,
-              });
-            }
-          }
-        break;
-      case "RailStation":
-        const nodeRail = node as RailStation<false>;
-        if (CONFIG.ROUTE_BY.has("rail"))
-          for (const [ci, conns] of Object.entries(nodeRail.connections)) {
-            const nodeRail2 = gd.railStation(ci)!;
-            for (const conn of conns) {
-              if (
-                conn.direction &&
-                conn.direction.one_way &&
-                conn.direction.direction === i
-              )
-                continue;
-              const railLine = gd.railLine(conn.line)!;
-              if (
-                railLine.mode === "traincarts" &&
-                !CONFIG.ROUTE_BY.has("traincarts")
-              )
-                continue;
-              if (railLine.mode === "warp" && !CONFIG.ROUTE_BY.has("warp"))
-                continue;
-              if (
-                railLine.mode === "vehicles" &&
-                !CONFIG.ROUTE_BY.has("vehicles")
-              )
-                continue;
-              if (railLine.mode === "cart" && !CONFIG.ROUTE_BY.has("cart"))
-                continue;
-              const railCompany = gd.railCompany(railLine.company)!;
-              let label =
-                (conn.direction?.direction === i
-                  ? conn.direction?.backward_label
-                  : conn.direction?.forward_label) ?? "";
-              if (label) label = `(${label}) `;
-              neighbours.set(`${ci} ${railLine.i}`, {
-                cost:
-                  cost +
-                  (railLine.mode === "traincarts" || railLine.mode == "vehicles"
-                    ? distance(nodeRail.coordinates, nodeRail2.coordinates) /
-                      (railCompany.local ? CONFIG.TRAINCART_LOCAL_MPS : CONFIG.TRAINCART_MPS)
-                    : railLine.mode === "cart"
-                      ? distance(nodeRail.coordinates, nodeRail2.coordinates) /
-                        CONFIG.CART_MPS
-                      : CONFIG.WARP_COST) +
-                  (iLine === railLine.i ? 0 : CONFIG.CHANGING_COST),
-                text: `Take ${railCompany.name} ${displayNode(railLine)} ${label}to ${displayNode(nodeRail2)}`,
-              });
-            }
-          }
-        break;
-      case "SeaStop":
-        const nodeSea = node as SeaStop<false>;
-        if (CONFIG.ROUTE_BY.has("sea") && CONFIG.ROUTE_BY.has("warp"))
-          for (const [ci, conns] of Object.entries(nodeSea.connections)) {
-            const nodeSea2 = gd.railStation(ci)!;
-            for (const conn of conns) {
-              if (
-                conn.direction &&
-                conn.direction.one_way &&
-                conn.direction.direction === i
-              )
-                continue;
-              const seaLine = gd.seaLine(conn.line)!;
-              // TODO seaLine.mode
-              const companyName = gd.seaCompany(seaLine.company)!.name;
-              let label =
-                (conn.direction?.direction === i
-                  ? conn.direction?.backward_label
-                  : conn.direction?.forward_label) ?? "";
-              if (label) label = `(${label}) `;
-              neighbours.set(`${ci} ${seaLine.i}`, {
-                cost:
-                  cost +
-                  CONFIG.WARP_COST +
-                  (iLine === seaLine.i ? 0 : CONFIG.CHANGING_COST),
-                text: `Take ${companyName} ${displayNode(seaLine)} ${label}to ${displayNode(nodeSea2)}`,
-              });
-            }
-          }
-        break;
+      }
+    } else if (node instanceof SeaStop) {
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM SeaDock WHERE stop = $1`,
+        [node.i],
+      );
+      for (const [dockI, dockCode] of sql) {
+        neighbours.push({
+          i: dockI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: dockCode ? () => `Go to dock ${dockCode}` : undefined,
+        });
+      }
+    } else if (node instanceof SeaDock) {
+      const stop = node.stop;
+      neighbours.push({ i: stop.i, cost });
+
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM SeaDock WHERE stop = $1 AND i != $2`,
+        [stop.i, node.i],
+      );
+      for (const [dockI, dockCode] of sql) {
+        neighbours.push({
+          i: dockI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: dockCode ? () => `Go to dock ${dockCode}` : undefined,
+        });
+      }
+      if (CONFIG.ROUTE_BY.has("sea")) {
+        const sql = gd.execGetMany<
+          [string | null, number | null, ID, ID, string | null, ID, string]
+        >(
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, CP.name
+               FROM SeaConnection C
+                LEFT JOIN SeaLine L ON C.line = L.i
+                LEFT JOIN SeaDock B ON C."to" = B.i
+                LEFT JOIN SeaCompany CP ON L.company = CP.i
+               WHERE C."from" = $1`,
+          [node.i],
+        );
+        for (const [
+          connDirection,
+          connDuration,
+          toDockI,
+          lineI,
+          lineMode,
+          toStopI,
+          companyName,
+        ] of sql) {
+          if (
+            lineMode === "traincarts ferry" &&
+            !CONFIG.ROUTE_BY.has("traincarts")
+          )
+            continue;
+          if (lineMode !== "traincarts ferry" && !CONFIG.ROUTE_BY.has("warp"))
+            continue;
+
+          const line = new SeaLine(lineI, gd);
+          const toStop = new SeaStop(toStopI, gd);
+          let label = connDirection ?? "";
+          if (label) label = `(${label}) `;
+          neighbours.push({
+            i: toDockI,
+            cost:
+              cost +
+              (connDuration ??
+                (lineMode === "traincarts ferry"
+                  ? distance(stop.coordinates, toStop.coordinates) /
+                    CONFIG.TRAINCART_MPS
+                  : CONFIG.WARP_COST)),
+            text: () =>
+              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStop)}`,
+          });
+        }
+      }
+    } else if (node instanceof RailStation) {
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM RailPlatform WHERE station = $1`,
+        [node.i],
+      );
+      for (const [platformI, platformCode] of sql) {
+        neighbours.push({
+          i: platformI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: platformCode
+            ? () => `Go to platform ${platformCode}`
+            : undefined,
+        });
+      }
+    } else if (node instanceof RailPlatform) {
+      const station = node.station;
+      neighbours.push({ i: station.i, cost });
+
+      const sql = gd.execGetMany<[ID, string | null]>(
+        `SELECT i, code FROM RailPlatform WHERE station = $1 AND i != $2`,
+        [station.i, node.i],
+      );
+      for (const [platformI, platformCode] of sql) {
+        neighbours.push({
+          i: platformI,
+          cost: cost + CONFIG.CHANGING_COST,
+          text: platformCode
+            ? () => `Go to platform ${platformCode}`
+            : undefined,
+        });
+      }
+      if (CONFIG.ROUTE_BY.has("rail")) {
+        const sql = gd.execGetMany<
+          [
+            string | null,
+            number | null,
+            ID,
+            ID,
+            string | null,
+            number | null,
+            ID,
+            string,
+          ]
+        >(
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, L.local, B.station, CP.name
+               FROM RailConnection C
+                LEFT JOIN RailLine L ON C.line = L.i
+                LEFT JOIN RailPlatform B ON C."to" = B.i
+                LEFT JOIN RailCompany CP ON L.company = CP.i
+               WHERE C."from" = $1`,
+          [node.i],
+        );
+        for (const [
+          connDirection,
+          connDuration,
+          toPlatformI,
+          lineI,
+          lineMode,
+          lineLocal,
+          toStationI,
+          companyName,
+        ] of sql) {
+          if (lineMode === "traincarts" && !CONFIG.ROUTE_BY.has("traincarts"))
+            continue;
+          if (lineMode === "warp" && !CONFIG.ROUTE_BY.has("warp")) continue;
+          if (lineMode === "vehicles" && !CONFIG.ROUTE_BY.has("vehicles"))
+            continue;
+          if (lineMode === "cart" && !CONFIG.ROUTE_BY.has("cart")) continue;
+
+          const line = new RailLine(lineI, gd);
+          const toStation = new RailStation(toStationI, gd);
+          let label = connDirection ?? "";
+          if (label) label = `(${label}) `;
+          neighbours.push({
+            i: toPlatformI,
+            cost:
+              cost +
+              (connDuration ??
+                (lineMode === "traincarts" || lineMode == "vehicles"
+                  ? distance(station.coordinates, toStation.coordinates) /
+                    (lineLocal
+                      ? CONFIG.TRAINCART_LOCAL_MPS
+                      : CONFIG.TRAINCART_MPS)
+                  : lineMode === "cart"
+                    ? distance(station.coordinates, toStation.coordinates) /
+                      CONFIG.CART_MPS
+                    : CONFIG.WARP_COST)),
+            text: () =>
+              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStation)}`,
+          });
+        }
+      }
     }
 
-    for (const [ni, { cost: newCost, text }] of neighbours) {
-      const existingCost = costs.get(ni) ?? Infinity;
-      if (!costs.has(ni)) q.push(ni);
+    for (const { i: neighbour, cost: newCost, text } of neighbours) {
+      const existingCost = costs.get(neighbour) ?? Infinity;
+      if (!costs.has(neighbour)) q.push(neighbour);
       if (newCost < existingCost) {
-        cameFrom.set(ni, { from: il, text });
-        costs.set(ni, newCost);
+        cameFrom.set(neighbour, { from: node.i, text });
+        costs.set(neighbour, newCost);
       }
     }
   }
@@ -443,14 +586,14 @@ function dijkstra(from: IntID<Node>, to: IntID<Node>): string[] {
 
 htmlGo.addEventListener("click", () => {
   htmlOut.innerHTML = "";
-  const fromI = parseInt(htmlFrom.value);
-  const toI = parseInt(htmlTo.value);
-  if (fromI === toI) {
+  const from = gd.getNode(parseInt(htmlFrom.value))! as LocatedNodes;
+  const to = gd.getNode(parseInt(htmlTo.value))! as LocatedNodes;
+  if (from.i === to.i) {
     htmlOut.innerHTML = "Already there";
     return;
   }
 
-  htmlOut.innerHTML += dijkstra(fromI, toI)
+  htmlOut.innerHTML += dijkstra(from, to)
     .map((a) =>
       a
         .replaceAll("&", "&amp;")
