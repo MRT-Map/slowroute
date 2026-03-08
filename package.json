@@ -18,8 +18,9 @@
     "vite": "7.3.1"
   },
   "dependencies": {
-    "gatelogue-types": "3.0.7",
+    "gatelogue-types": "github:mrt-map/gatelogue#path:/gatelogue-types-ts",
     "jquery": "4.0.0",
-    "select2": "4.1.0-rc.0"
+    "select2": "4.1.0-rc.0",
+    "sql.js": "^1.14.1"
   }
 }

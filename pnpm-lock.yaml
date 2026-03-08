@@ -9,14 +9,17 @@ importers:
   .:
     dependencies:
       gatelogue-types:
-        specifier: 3.0.7
-        version: 3.0.7
+        specifier: github:mrt-map/gatelogue#path:/gatelogue-types-ts
+        version: https://codeload.github.com/mrt-map/gatelogue/tar.gz/aa4939a6ffcb2f85f45105eaf9043ed5520c6845#path:/gatelogue-types-ts
       jquery:
         specifier: 4.0.0
         version: 4.0.0
       select2:
         specifier: 4.1.0-rc.0
         version: 4.1.0-rc.0
+      sql.js:
+        specifier: ^1.14.1
+        version: 1.14.1
     devDependencies:
       '@types/jquery':
         specifier: 4.0.0
@@ -370,8 +373,9 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gatelogue-types@3.0.7:
-    resolution: {integrity: sha512-iHw/A+L96DxCq5z31sa0ZTYMEqX7iTo3trmR5fU7Wtd6iv+M/xwF9vepghZRzsuSbjQXUKgiijjpWaxV53Bklw==}
+  gatelogue-types@https://codeload.github.com/mrt-map/gatelogue/tar.gz/aa4939a6ffcb2f85f45105eaf9043ed5520c6845#path:/gatelogue-types-ts:
+    resolution: {path: /gatelogue-types-ts, tarball: https://codeload.github.com/mrt-map/gatelogue/tar.gz/aa4939a6ffcb2f85f45105eaf9043ed5520c6845}
+    version: 3.0.7
 
   jquery@4.0.0:
     resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
@@ -674,7 +678,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gatelogue-types@3.0.7:
+  gatelogue-types@https://codeload.github.com/mrt-map/gatelogue/tar.gz/aa4939a6ffcb2f85f45105eaf9043ed5520c6845#path:/gatelogue-types-ts:
     dependencies:
       sql.js: 1.14.1
 

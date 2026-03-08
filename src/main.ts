@@ -21,6 +21,8 @@ import {
 import $ from "jquery";
 import select2 from "select2";
 import "select2/dist/css/select2.css";
+import initSqlJs from "sql.js";
+import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 // @ts-expect-error
 select2($);
 
@@ -32,7 +34,22 @@ const htmlFromRandom = document.getElementById(
   "from-random",
 )! as HTMLButtonElement;
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
-const gd = await GD.get();
+const SQL = await initSqlJs({locateFile: () => wasmUrl})
+const gd = await GD.get(SQL);
+gd.db.run(`
+  CREATE INDEX ProximityNode1Index ON Proximity(node1);
+  CREATE INDEX ProximityNode2Index ON Proximity(node2);
+  CREATE INDEX SharedFacilityNode1Index ON SharedFacility(node1);
+  CREATE INDEX SharedFacilityNode2Index ON SharedFacility(node2);
+  CREATE INDEX AirGateAirportIndex ON AirGate(Airport);
+  CREATE INDEX AirFlightFromIndex ON AirFlight("from");
+  CREATE INDEX BusBerthStopIndex ON BusBerth(stop);
+  CREATE INDEX BusConnectionFromIndex ON BusConnection("from");
+  CREATE INDEX SeaDockStopIndex ON SeaDock(stop);
+  CREATE INDEX SeaConnectionFromIndex ON SeaConnection("from");
+  CREATE INDEX RailPlatformStationIndex ON RailPlatform(station);
+  CREATE INDEX RailConnectionFromIndex ON RailConnection("from");
+`);
 
 function displayNode(node: Node) {
   let [codes, name]: [string | string[], string | string[]] = (
@@ -314,19 +331,17 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           )
             continue;
 
-          const gateCode = node.code;
           const toAirport = new AirAirport(toAirportI, gd);
           neighbours.push({
             i: toGateI,
             cost:
               cost +
-              (gateCode === null ? CONFIG.CHANGING_COST : 0) +
               (aircraftMode === "traincarts plane"
                 ? distance(airport.coordinates, toAirport.coordinates) /
                   CONFIG.TRAINCART_MPS
                 : CONFIG.WARP_COST), // todo flight duration
             text: () =>
-              (gateCode !== null ? `At Gate ${gateCode} t` : "T") +
+              (node.code !== null ? `At Gate ${node.code} t` : "T") +
               `ake ${airlineName} ${flightCode} to ${displayNode(toAirport)}` +
               (toGateCode !== null ? ` (Gate ${toGateCode})` : ""),
           });
