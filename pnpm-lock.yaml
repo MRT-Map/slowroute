@@ -18,7 +18,7 @@ importers:
         specifier: 4.1.0-rc.0
         version: 4.1.0-rc.0
       sql.js:
-        specifier: ^1.14.1
+        specifier: 1.14.1
         version: 1.14.1
     devDependencies:
       '@types/jquery':
