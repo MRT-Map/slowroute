@@ -16,13 +16,13 @@ import {
   RailLine,
   Town,
   type ID,
-  type AirMode,
+  type AirMode, AirAirline, BusCompany, RailCompany, SeaCompany,
 } from "gatelogue-types";
 import $ from "jquery";
 import select2 from "select2";
 import "select2/dist/css/select2.css";
 import initSqlJs from "sql.js";
-import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
+import wasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 // @ts-expect-error
 select2($);
 
@@ -34,9 +34,11 @@ const htmlFromRandom = document.getElementById(
   "from-random",
 )! as HTMLButtonElement;
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
+
 const SQL = await initSqlJs({locateFile: () => wasmUrl})
 const gd = await GD.get(SQL);
 gd.db.run(`
+  CREATE INDEX NodeTypeIndex ON Node(type);
   CREATE INDEX ProximityNode1Index ON Proximity(node1);
   CREATE INDEX ProximityNode2Index ON Proximity(node2);
   CREATE INDEX SharedFacilityNode1Index ON SharedFacility(node1);
@@ -51,7 +53,10 @@ gd.db.run(`
   CREATE INDEX RailConnectionFromIndex ON RailConnection("from");
 `);
 
-function displayNode(node: Node) {
+function displayNode(node: Node | ID) {
+  if (!(node instanceof Node)) {
+    node = gd.getNode(node)!;
+  }
   let [codes, name]: [string | string[], string | string[]] = (
     node instanceof AirAirport
       ? [node.code, node.names]
@@ -260,7 +265,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           i: proxI,
           cost: cost + distance / CONFIG.FLYING_MPS + CONFIG.CHANGING_COST,
           text: () =>
-            `Fly ${Math.round(distance)} blocks to ${proxType} ${displayNode(gd.getNode(proxI, proxType)!)}`,
+            `Fly ${Math.round(distance)} blocks to ${proxType} ${displayNode(proxI)}`,
         });
       }
       for (const nodeSF of node.sharedFacilities) {
@@ -268,7 +273,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           i: nodeSF.i,
           cost: cost + CONFIG.CHANGING_COST,
           // @ts-expect-error
-          text: `Change to ${nodeSF.type} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
+          text: () => `Change to ${nodeSF.type} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
         });
       }
     }
@@ -302,12 +307,11 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
       }
       if (CONFIG.ROUTE_BY.has("air")) {
         const sql = gd.execGetMany<
-          [string, AirMode | null, string, ID, string | null, ID]
+          [string, AirMode | null, ID, ID, ID]
         >(
-          `SELECT F.code, C.mode, A.name, G.i, G.code, G.airport
+          `SELECT F.code, C.mode, F.airline, G.i, G.airport
                FROM AirFlight F
                LEFT JOIN Aircraft C ON F.aircraft = C.name
-               LEFT JOIN AirAirline A ON F.airline = A.i
                LEFT JOIN AirGate G ON F."to" = G.i
                WHERE F."from" = $1`,
           [node.i],
@@ -315,9 +319,8 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
         for (const [
           flightCode,
           aircraftMode,
-          airlineName,
+          airlineI,
           toGateI,
-          toGateCode,
           toAirportI,
         ] of sql) {
           if (
@@ -331,7 +334,9 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           )
             continue;
 
+          const toGate = new AirGate(toGateI, gd)
           const toAirport = new AirAirport(toAirportI, gd);
+          const toAirline = new AirAirline(airlineI, gd);
           neighbours.push({
             i: toGateI,
             cost:
@@ -342,8 +347,8 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
                 : CONFIG.WARP_COST), // todo flight duration
             text: () =>
               (node.code !== null ? `At Gate ${node.code} t` : "T") +
-              `ake ${airlineName} ${flightCode} to ${displayNode(toAirport)}` +
-              (toGateCode !== null ? ` (Gate ${toGateCode})` : ""),
+              `ake ${toAirline.name} ${flightCode} to ${displayNode(toAirport)}` +
+              (toGate.code !== null ? ` (Gate ${toGate.code})` : ""),
           });
         }
       }
@@ -376,13 +381,12 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
       }
       if (CONFIG.ROUTE_BY.has("bus")) {
         const sql = gd.execGetMany<
-          [string | null, number | null, ID, ID, string | null, ID, string]
+          [string | null, number | null, ID, ID, string | null, ID, ID]
         >(
-          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, CP.name
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, L.company
                FROM BusConnection C
                LEFT JOIN BusLine L ON C.line = L.i
                LEFT JOIN BusBerth B ON C."to" = B.i
-               LEFT JOIN BusCompany CP ON L.company = CP.i
                WHERE C."from" = $1`,
           [node.i],
         );
@@ -393,15 +397,15 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           lineI,
           lineMode,
           toStopI,
-          companyName,
+          companyI,
         ] of sql) {
           if (lineMode === "traincarts" && !CONFIG.ROUTE_BY.has("traincarts"))
             continue;
           if (lineMode !== "traincarts" && !CONFIG.ROUTE_BY.has("warp"))
             continue;
 
-          const line = new BusLine(lineI, gd);
           const toStop = new BusStop(toStopI, gd);
+          const company = new BusCompany(companyI, gd)
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -414,7 +418,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
                     CONFIG.TRAINCART_MPS
                   : CONFIG.WARP_COST)),
             text: () =>
-              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStop)}`,
+              `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStop)}`,
           });
         }
       }
@@ -447,13 +451,12 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
       }
       if (CONFIG.ROUTE_BY.has("sea")) {
         const sql = gd.execGetMany<
-          [string | null, number | null, ID, ID, string | null, ID, string]
+          [string | null, number | null, ID, ID, string | null, ID, ID]
         >(
-          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, CP.name
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, B.stop, L.company
                FROM SeaConnection C
                 LEFT JOIN SeaLine L ON C.line = L.i
                 LEFT JOIN SeaDock B ON C."to" = B.i
-                LEFT JOIN SeaCompany CP ON L.company = CP.i
                WHERE C."from" = $1`,
           [node.i],
         );
@@ -464,7 +467,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           lineI,
           lineMode,
           toStopI,
-          companyName,
+          companyI,
         ] of sql) {
           if (
             lineMode === "traincarts ferry" &&
@@ -474,8 +477,8 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           if (lineMode !== "traincarts ferry" && !CONFIG.ROUTE_BY.has("warp"))
             continue;
 
-          const line = new SeaLine(lineI, gd);
           const toStop = new SeaStop(toStopI, gd);
+          const company = new SeaCompany(companyI, gd)
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -488,7 +491,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
                     CONFIG.TRAINCART_MPS
                   : CONFIG.WARP_COST)),
             text: () =>
-              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStop)}`,
+              `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStop)}`,
           });
         }
       }
@@ -533,14 +536,13 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
             string | null,
             number | null,
             ID,
-            string,
+            ID,
           ]
         >(
-          `SELECT C.direction, C.duration, B.i, L.i, L.mode, L.local, B.station, CP.name
+          `SELECT C.direction, C.duration, B.i, L.i, L.mode, L.local, B.station, L.company
                FROM RailConnection C
                 LEFT JOIN RailLine L ON C.line = L.i
                 LEFT JOIN RailPlatform B ON C."to" = B.i
-                LEFT JOIN RailCompany CP ON L.company = CP.i
                WHERE C."from" = $1`,
           [node.i],
         );
@@ -552,7 +554,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           lineMode,
           lineLocal,
           toStationI,
-          companyName,
+          companyI,
         ] of sql) {
           if (lineMode === "traincarts" && !CONFIG.ROUTE_BY.has("traincarts"))
             continue;
@@ -561,8 +563,8 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
             continue;
           if (lineMode === "cart" && !CONFIG.ROUTE_BY.has("cart")) continue;
 
-          const line = new RailLine(lineI, gd);
           const toStation = new RailStation(toStationI, gd);
+          const company = new RailCompany(companyI, gd)
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -580,7 +582,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
                       CONFIG.CART_MPS
                     : CONFIG.WARP_COST)),
             text: () =>
-              `Take ${companyName} ${displayNode(line)} ${label}to ${displayNode(toStation)}`,
+              `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStation)}`,
           });
         }
       }
@@ -608,6 +610,7 @@ htmlGo.addEventListener("click", () => {
     return;
   }
 
+  console.time("dijkstra")
   try {
     htmlOut.innerHTML += dijkstra(from, to)
       .map((a) =>
@@ -621,5 +624,8 @@ htmlGo.addEventListener("click", () => {
       .join("<br>");
   } catch (e) {
     htmlOut.innerHTML = `Potential OOM. Try refreshing this page<br>${e}`
+    throw e
+  } finally {
+    console.timeEnd("dijkstra")
   }
 });
