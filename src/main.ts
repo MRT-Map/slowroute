@@ -36,7 +36,7 @@ const htmlFromRandom = document.getElementById(
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
 
 const SQL = await initSqlJs({locateFile: () => wasmUrl})
-const gd = await GD.get(SQL);
+const gd = await GD.get(false, SQL);
 gd.db.run(`
   CREATE INDEX NodeTypeIndex ON Node(type);
   CREATE INDEX ProximityNode1Index ON Proximity(node1);
