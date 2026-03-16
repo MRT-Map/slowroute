@@ -15,7 +15,7 @@
     "@types/sql.js": "1.4.9",
     "prettier": "3.8.1",
     "typescript": "5.9.3",
-    "vite": "7.3.1"
+    "vite": "8.0.0"
   },
   "dependencies": {
     "gatelogue-types": "github:mrt-map/gatelogue#path:/gatelogue-types-ts",
