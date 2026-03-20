@@ -16,7 +16,11 @@ import {
   RailLine,
   Town,
   type ID,
-  type AirMode, AirAirline, BusCompany, RailCompany, SeaCompany,
+  type AirMode,
+  AirAirline,
+  BusCompany,
+  RailCompany,
+  SeaCompany,
 } from "gatelogue-types";
 import $ from "jquery";
 import select2 from "select2";
@@ -35,7 +39,7 @@ const htmlFromRandom = document.getElementById(
 )! as HTMLButtonElement;
 const htmlToRandom = document.getElementById("to-random")! as HTMLButtonElement;
 
-const SQL = await initSqlJs({locateFile: () => wasmUrl})
+const SQL = await initSqlJs({ locateFile: () => wasmUrl });
 const gd = await GD.get(false, SQL);
 gd.db.run(`
   CREATE INDEX NodeTypeIndex ON Node(type);
@@ -61,12 +65,12 @@ function displayNode(node: Node | ID) {
     node instanceof AirAirport
       ? [node.code, node.names]
       : node instanceof BusStop ||
-          node instanceof SeaStop ||
-          node instanceof RailStation
+        node instanceof SeaStop ||
+        node instanceof RailStation
         ? [node.codes, node.name ?? ""]
         : node instanceof BusLine ||
-            node instanceof SeaLine ||
-            node instanceof RailLine
+          node instanceof SeaLine ||
+          node instanceof RailLine
           ? [node.code, node.name ?? ""]
           : node instanceof SpawnWarp
             ? ["", node.name]
@@ -272,8 +276,9 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
         neighbours.push({
           i: nodeSF.i,
           cost: cost + CONFIG.CHANGING_COST,
-          // @ts-expect-error
-          text: () => `Change to ${nodeSF.type} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
+          text: () =>
+            // @ts-expect-error
+            `Change to ${nodeSF.type} ${nodeSF.company.name} ${displayNode(nodeSF)}`,
         });
       }
     }
@@ -306,9 +311,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
         });
       }
       if (CONFIG.ROUTE_BY.has("air")) {
-        const sql = gd.execGetMany<
-          [string, AirMode | null, ID, ID, ID]
-        >(
+        const sql = gd.execGetMany<[string, AirMode | null, ID, ID, ID]>(
           `SELECT F.code, C.mode, F.airline, G.i, G.airport
                FROM AirFlight F
                LEFT JOIN Aircraft C ON F.aircraft = C.name
@@ -334,7 +337,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           )
             continue;
 
-          const toGate = new AirGate(toGateI, gd)
+          const toGate = new AirGate(toGateI, gd);
           const toAirport = new AirAirport(toAirportI, gd);
           const toAirline = new AirAirline(airlineI, gd);
           neighbours.push({
@@ -343,7 +346,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
               cost +
               (aircraftMode === "traincarts plane"
                 ? distance(airport.coordinates, toAirport.coordinates) /
-                  CONFIG.TRAINCART_MPS
+                CONFIG.TRAINCART_MPS
                 : CONFIG.WARP_COST), // todo flight duration
             text: () =>
               (node.code !== null ? `At Gate ${node.code} t` : "T") +
@@ -405,7 +408,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
             continue;
 
           const toStop = new BusStop(toStopI, gd);
-          const company = new BusCompany(companyI, gd)
+          const company = new BusCompany(companyI, gd);
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -415,7 +418,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
               (connDuration ??
                 (lineMode === "traincarts"
                   ? distance(stop.coordinates, toStop.coordinates) /
-                    CONFIG.TRAINCART_MPS
+                  CONFIG.TRAINCART_MPS
                   : CONFIG.WARP_COST)),
             text: () =>
               `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStop)}`,
@@ -478,7 +481,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
             continue;
 
           const toStop = new SeaStop(toStopI, gd);
-          const company = new SeaCompany(companyI, gd)
+          const company = new SeaCompany(companyI, gd);
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -488,7 +491,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
               (connDuration ??
                 (lineMode === "traincarts ferry"
                   ? distance(stop.coordinates, toStop.coordinates) /
-                    CONFIG.TRAINCART_MPS
+                  CONFIG.TRAINCART_MPS
                   : CONFIG.WARP_COST)),
             text: () =>
               `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStop)}`,
@@ -564,7 +567,7 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
           if (lineMode === "cart" && !CONFIG.ROUTE_BY.has("cart")) continue;
 
           const toStation = new RailStation(toStationI, gd);
-          const company = new RailCompany(companyI, gd)
+          const company = new RailCompany(companyI, gd);
           let label = connDirection ?? "";
           if (label) label = `(${label}) `;
           neighbours.push({
@@ -574,12 +577,12 @@ function dijkstra(from: LocatedNodes, to: LocatedNodes): string[] {
               (connDuration ??
                 (lineMode === "traincarts" || lineMode == "vehicles"
                   ? distance(station.coordinates, toStation.coordinates) /
-                    (lineLocal
-                      ? CONFIG.TRAINCART_LOCAL_MPS
-                      : CONFIG.TRAINCART_MPS)
+                  (lineLocal
+                    ? CONFIG.TRAINCART_LOCAL_MPS
+                    : CONFIG.TRAINCART_MPS)
                   : lineMode === "cart"
                     ? distance(station.coordinates, toStation.coordinates) /
-                      CONFIG.CART_MPS
+                    CONFIG.CART_MPS
                     : CONFIG.WARP_COST)),
             text: () =>
               `Take ${company.name} ${displayNode(lineI)} ${label}to ${displayNode(toStation)}`,
@@ -610,7 +613,7 @@ htmlGo.addEventListener("click", () => {
     return;
   }
 
-  console.time("dijkstra")
+  console.time("dijkstra");
   try {
     htmlOut.innerHTML += dijkstra(from, to)
       .map((a) =>
@@ -623,9 +626,9 @@ htmlGo.addEventListener("click", () => {
       )
       .join("<br>");
   } catch (e) {
-    htmlOut.innerHTML = `Potential OOM. Try refreshing this page<br>${e}`
-    throw e
+    htmlOut.innerHTML = `Potential OOM. Try refreshing this page<br>${e}`;
+    throw e;
   } finally {
-    console.timeEnd("dijkstra")
+    console.timeEnd("dijkstra");
   }
 });
