@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       gatelogue-types:
-        specifier: github:mrt-map/gatelogue#path:/gatelogue-types-ts
-        version: https://codeload.github.com/mrt-map/gatelogue/tar.gz/eda7cd85ccc46a99ec52456e9b3949100dee3e25#path:/gatelogue-types-ts
+        specifier: 3.1.0
+        version: 3.1.0
       jquery:
         specifier: 4.0.0
         version: 4.0.0
@@ -28,8 +28,8 @@ importers:
         specifier: 4.0.63
         version: 4.0.63
       '@types/sql.js':
-        specifier: 1.4.9
-        version: 1.4.9
+        specifier: 1.4.10
+        version: 1.4.10
       prettier:
         specifier: 3.8.1
         version: 3.8.1
@@ -330,8 +330,8 @@ packages:
   '@types/select2@4.0.63':
     resolution: {integrity: sha512-/DXUfPSj3iVTGlRYRYPCFKKSogAGP/j+Z0fIMXbBiBtmmZj0WH7vnfNuckafq9C43KnqPPQW2TI/Rj/vTSGnQQ==}
 
-  '@types/sql.js@1.4.9':
-    resolution: {integrity: sha512-ep8b36RKHlgWPqjNG9ToUrPiwkhwh0AEzy883mO5Xnd+cL6VBH1EvSjBAAuxLUFF2Vn/moE3Me6v9E1Lo+48GQ==}
+  '@types/sql.js@1.4.10':
+    resolution: {integrity: sha512-E7XnsrWm01Uvp0/0+iRI9ZwO/BvKyiiHUpcVKJenVVH2pUdZndsgQ5BWXNxKaEO+bkKbvU29Ky9o21juMip1ww==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -356,9 +356,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gatelogue-types@https://codeload.github.com/mrt-map/gatelogue/tar.gz/eda7cd85ccc46a99ec52456e9b3949100dee3e25#path:/gatelogue-types-ts:
-    resolution: {path: /gatelogue-types-ts, tarball: https://codeload.github.com/mrt-map/gatelogue/tar.gz/eda7cd85ccc46a99ec52456e9b3949100dee3e25}
-    version: 3.0.8
+  gatelogue-types@3.1.0:
+    resolution: {integrity: sha512-WTiC516i0nF4nxffAAQLe7ujjIOhttcNd4P19gV17HQyGI+FLWvW8qGxx3KIzK5bzkbaLWJl1E5PFECo8hdZYg==}
 
   jquery@4.0.0:
     resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
@@ -704,7 +703,7 @@ snapshots:
     dependencies:
       '@types/jquery': 4.0.0
 
-  '@types/sql.js@1.4.9':
+  '@types/sql.js@1.4.10':
     dependencies:
       '@types/emscripten': 1.41.5
       '@types/node': 25.5.0
@@ -748,7 +747,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gatelogue-types@https://codeload.github.com/mrt-map/gatelogue/tar.gz/eda7cd85ccc46a99ec52456e9b3949100dee3e25#path:/gatelogue-types-ts:
+  gatelogue-types@3.1.0:
     dependencies:
       sql.js: 1.14.1
 
