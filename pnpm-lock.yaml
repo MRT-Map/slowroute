@@ -28,8 +28,8 @@ importers:
         specifier: 4.0.63
         version: 4.0.63
       '@types/sql.js':
-        specifier: 1.4.9
-        version: 1.4.9
+        specifier: 1.4.10
+        version: 1.4.10
       prettier:
         specifier: 3.8.1
         version: 3.8.1
@@ -326,8 +326,8 @@ packages:
   '@types/select2@4.0.63':
     resolution: {integrity: sha512-/DXUfPSj3iVTGlRYRYPCFKKSogAGP/j+Z0fIMXbBiBtmmZj0WH7vnfNuckafq9C43KnqPPQW2TI/Rj/vTSGnQQ==}
 
-  '@types/sql.js@1.4.9':
-    resolution: {integrity: sha512-ep8b36RKHlgWPqjNG9ToUrPiwkhwh0AEzy883mO5Xnd+cL6VBH1EvSjBAAuxLUFF2Vn/moE3Me6v9E1Lo+48GQ==}
+  '@types/sql.js@1.4.10':
+    resolution: {integrity: sha512-E7XnsrWm01Uvp0/0+iRI9ZwO/BvKyiiHUpcVKJenVVH2pUdZndsgQ5BWXNxKaEO+bkKbvU29Ky9o21juMip1ww==}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -697,7 +697,7 @@ snapshots:
     dependencies:
       '@types/jquery': 4.0.0
 
-  '@types/sql.js@1.4.9':
+  '@types/sql.js@1.4.10':
     dependencies:
       '@types/emscripten': 1.41.5
       '@types/node': 25.5.0
