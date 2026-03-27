@@ -14,7 +14,7 @@
     "@types/select2": "4.0.63",
     "@types/sql.js": "1.4.10",
     "prettier": "3.8.1",
-    "typescript": "5.9.3",
+    "typescript": "6.0.2",
     "vite": "8.0.2"
   },
   "dependencies": {
