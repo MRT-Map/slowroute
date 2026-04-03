@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       gatelogue-types:
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.2
+        version: 3.1.2
       jquery:
         specifier: 4.0.0
         version: 4.0.0
@@ -194,8 +194,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gatelogue-types@3.1.0:
-    resolution: {integrity: sha512-WTiC516i0nF4nxffAAQLe7ujjIOhttcNd4P19gV17HQyGI+FLWvW8qGxx3KIzK5bzkbaLWJl1E5PFECo8hdZYg==}
+  gatelogue-types@3.1.2:
+    resolution: {integrity: sha512-9e9xMW0OfEYSn14nD8gzLXkysOXl/IQ7R941q/ih0Z1ag6Xi1E40n90GeYnx66OLxjl2gwIDBKLqH8+/7gBs7Q==}
 
   jquery@4.0.0:
     resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
@@ -478,7 +478,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gatelogue-types@3.1.0:
+  gatelogue-types@3.1.2:
     dependencies:
       sql.js: 1.14.1
 
