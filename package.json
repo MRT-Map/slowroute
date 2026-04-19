@@ -13,7 +13,7 @@
     "@types/jquery": "4.0.0",
     "@types/select2": "4.0.63",
     "@types/sql.js": "1.4.11",
-    "prettier": "3.8.2",
+    "prettier": "3.8.3",
     "typescript": "6.0.2",
     "vite": "8.0.8"
   },
