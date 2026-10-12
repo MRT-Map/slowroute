@@ -32,24 +32,17 @@ jobs:
         with:
           version: 12.10.1
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Build site
-        run: pnpm build --base=slowroute
-
-      - name: Add .nojekyll
-        run: touch dist/.nojekyll
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+          node-version: 26.11.1
+      - run: |
+          git config --global url."https://github.com/".insteadOf git@github.com:
+          git config --global url."https://".insteadOf git://
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm build --base=slowroute
+      - run: cd dist; echo > .nojekyll; cd ..
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           path: ./dist
 
