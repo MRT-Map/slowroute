@@ -19,7 +19,7 @@
   "dependencies": {
     "gatelogue-types": "3.1.5",
     "jquery": "4.1.0",
-    "select2": "4.1.1",
+    "select2": "4.2.0",
     "@sqlite.org/sqlite-wasm": "3.53.0-build1"
   }
 }
